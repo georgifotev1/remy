@@ -9,13 +9,14 @@ APP_ENV ?= development
 DB_URL ?= postgres://remy:remy@localhost:5432/remy?sslmode=disable
 export
 
-.PHONY: help up down migrate web-install web-build run dev test test-int lint build tidy
+.PHONY: help up down migrate migrate-down web-install web-build run dev test test-int lint build tidy
 
 help:
 	@printf '%s\n' \
 		'up          start local Postgres' \
 		'down        stop local Postgres (data is kept)' \
 		'migrate     apply goose migrations' \
+		'migrate-down roll back the last migration' \
 		'web-install install web dependencies' \
 		'web-build   build the Vue app into web/dist' \
 		'run         build web and run the API on :8080' \
@@ -34,6 +35,9 @@ down:
 
 migrate:
 	go run ./cmd/migrate
+
+migrate-down:
+	go run ./cmd/migrate down
 
 web-install:
 	pnpm -C web install --frozen-lockfile

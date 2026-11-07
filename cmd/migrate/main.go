@@ -1,10 +1,18 @@
-// Command migrate applies the goose SQL migrations.
+// Command migrate applies or rolls back the goose SQL migrations.
+//
+// Usage:
+//
+//	migrate        apply all pending migrations
+//	migrate up     same as above
+//	migrate down   roll back the most recent migration
 package main
 
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -32,6 +40,14 @@ func main() {
 }
 
 func run(ctx context.Context) error {
+	direction := "up"
+	if len(os.Args) > 1 {
+		direction = os.Args[1]
+	}
+	if direction != "up" && direction != "down" {
+		return fmt.Errorf("unknown direction %q (want up or down)", direction)
+	}
+
 	cfg, err := config.Load()
 	if err != nil {
 		return err
@@ -62,6 +78,13 @@ func run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("migration provider: %w", err)
 	}
+	if direction == "down" {
+		return down(ctx, provider, logger)
+	}
+	return up(ctx, provider, logger)
+}
+
+func up(ctx context.Context, provider *goose.Provider, logger *slog.Logger) error {
 	results, err := provider.Up(ctx)
 	if err != nil {
 		return fmt.Errorf("apply migrations: %w", err)
@@ -77,5 +100,22 @@ func run(ctx context.Context) error {
 			"duration", result.Duration.String(),
 		)
 	}
+	return nil
+}
+
+func down(ctx context.Context, provider *goose.Provider, logger *slog.Logger) error {
+	result, err := provider.Down(ctx)
+	if errors.Is(err, goose.ErrNoNextVersion) {
+		logger.Info("no migrations to roll back")
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("roll back migration: %w", err)
+	}
+	logger.Info("migration rolled back",
+		"migration_version", result.Source.Version,
+		"path", result.Source.Path,
+		"duration", result.Duration.String(),
+	)
 	return nil
 }

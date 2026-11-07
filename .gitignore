@@ -5,6 +5,7 @@ Thumbs.db
 # Editors / IDEs
 .idea/
 .vscode/*
+.zed/*
 !.vscode/extensions.json
 !.vscode/settings.json
 *.swp
@@ -44,3 +45,5 @@ coverage/
 # Logs & temp
 *.log
 tmp/
+
+prototype/
