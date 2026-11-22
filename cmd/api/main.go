@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/georgifotev1/remy/internal/config"
+	"github.com/georgifotev1/remy/internal/db"
 )
 
 func main() {
@@ -22,8 +23,17 @@ func main() {
 }
 
 func run() error {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	cfg := config.Load()
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+	pool, err := db.NewPool(ctx, cfg.DB.URL)
+	if err != nil {
+		return fmt.Errorf("db: %w", err)
+	}
+	defer pool.Close()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
@@ -40,9 +50,6 @@ func run() error {
 		IdleTimeout:       60 * time.Second,
 		MaxHeaderBytes:    1 << 20,
 	}
-
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
 
 	errCh := make(chan error, 1)
 	go func() {
