@@ -4,7 +4,7 @@ CREATE EXTENSION IF NOT EXISTS citext;
 CREATE TABLE users (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name          TEXT NOT NULL,
-    email         CITEXT NOT NULL UNIQUE,
+    email         CITEXT NOT NULL CONSTRAINT users_email_uq UNIQUE,
     password_hash TEXT NOT NULL,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -13,7 +13,7 @@ CREATE TABLE users (
 CREATE TABLE tenants (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name       TEXT NOT NULL,
-    slug       TEXT NOT NULL UNIQUE CHECK (slug ~ '^[a-z0-9-]+$'),
+    slug       TEXT NOT NULL CONSTRAINT tenants_slug_uq UNIQUE CHECK (slug ~ '^[a-z0-9-]+$'),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -42,7 +42,7 @@ CREATE TABLE memberships (
     tenant_id  UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     role_id    UUID NOT NULL REFERENCES roles(id)   ON DELETE RESTRICT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (user_id, tenant_id)
+    CONSTRAINT memberships_user_tenant_uq UNIQUE (user_id, tenant_id)
 );
 
 CREATE INDEX memberships_tenant_idx ON memberships (tenant_id);

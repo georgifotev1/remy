@@ -1,4 +1,4 @@
-package config
+package main
 
 import (
 	"fmt"
@@ -9,12 +9,12 @@ import (
 	"time"
 )
 
-// loader reads env vars and accumulates parse errors.
-type loader struct {
+// envLoader reads env vars and accumulates parse errors.
+type envLoader struct {
 	errs []error
 }
 
-func (l *loader) str(key, def string) string {
+func (l *envLoader) str(key, def string) string {
 	if v, ok := os.LookupEnv(key); ok && v != "" {
 		return v
 	}
@@ -23,7 +23,7 @@ func (l *loader) str(key, def string) string {
 
 // secret is like str, but in required mode (production) the variable
 // must be set explicitly, so dev defaults never leak into prod.
-func (l *loader) secret(key, devDefault string, required bool) string {
+func (l *envLoader) secret(key, devDefault string, required bool) string {
 	v := os.Getenv(key)
 	if v != "" {
 		return v
@@ -35,7 +35,7 @@ func (l *loader) secret(key, devDefault string, required bool) string {
 	return devDefault
 }
 
-func (l *loader) int(key string, def int) int {
+func (l *envLoader) int(key string, def int) int {
 	v := os.Getenv(key)
 	if v == "" {
 		return def
@@ -48,7 +48,7 @@ func (l *loader) int(key string, def int) int {
 	return n
 }
 
-func (l *loader) duration(key string, def time.Duration) time.Duration {
+func (l *envLoader) duration(key string, def time.Duration) time.Duration {
 	v := os.Getenv(key)
 	if v == "" {
 		return def
@@ -61,7 +61,7 @@ func (l *loader) duration(key string, def time.Duration) time.Duration {
 	return d
 }
 
-func (l *loader) list(key string, def []string) []string {
+func (l *envLoader) list(key string, def []string) []string {
 	v := os.Getenv(key)
 	if v == "" {
 		return def
@@ -76,7 +76,7 @@ func (l *loader) list(key string, def []string) []string {
 	return out
 }
 
-func (l *loader) level(key string, def slog.Level) slog.Level {
+func (l *envLoader) level(key string, def slog.Level) slog.Level {
 	v := os.Getenv(key)
 	if v == "" {
 		return def
