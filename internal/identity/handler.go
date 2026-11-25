@@ -1,11 +1,37 @@
 package identity
 
-import "net/http"
+import (
+	"log/slog"
+	"net/http"
 
-type IdentityHandlers struct{}
+	"github.com/georgifotev1/remy/internal/platform/httpx"
+)
 
-func NewIdentityHandlers() *IdentityHandlers {
-	return &IdentityHandlers{}
+type IdentityHandlers struct {
+	logger *slog.Logger
 }
 
-func (h *IdentityHandlers) SignUp(w http.ResponseWriter, r *http.Request) {}
+func NewIdentityHandlers(l *slog.Logger) *IdentityHandlers {
+	return &IdentityHandlers{
+		logger: l,
+	}
+}
+
+func (h *IdentityHandlers) Routes(mux *http.ServeMux) {
+	mux.HandleFunc("POST /sign-up", h.signUp)
+}
+
+func (h *IdentityHandlers) signUp(w http.ResponseWriter, r *http.Request) {
+	var payload SignupRequest
+	if err := httpx.Read(w, r, &payload); err != nil {
+		httpx.HandleError(w, r, h.logger, err)
+		return
+	}
+
+	if err := payload.Validate(); err != nil {
+		httpx.HandleError(w, r, h.logger, err)
+		return
+	}
+
+	httpx.Write(w, http.StatusCreated, User{Name: payload.User.Name})
+}

@@ -19,7 +19,7 @@ func HandleError(w http.ResponseWriter, r *http.Request, log *slog.Logger, err e
 
 	switch {
 	case errors.As(err, &verr):
-		Write(w, http.StatusUnprocessableEntity, Envelope{"errors": verr.Fields}, nil)
+		Write(w, http.StatusUnprocessableEntity, Envelope{"errors": verr.Fields})
 
 	case errors.As(err, &berr):
 		WriteError(w, http.StatusBadRequest, berr.Msg)

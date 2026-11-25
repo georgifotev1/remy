@@ -2,17 +2,16 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
+	"github.com/georgifotev1/remy/internal/app"
 	"github.com/georgifotev1/remy/internal/platform/config"
 	"github.com/georgifotev1/remy/internal/platform/db"
+	"github.com/georgifotev1/remy/internal/platform/logger"
 )
 
 func main() {
@@ -26,53 +25,25 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	cfg := config.Load()
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
 
-	pool, err := db.NewPool(ctx, cfg.DB.URL)
+	log := logger.New(cfg)
+	slog.SetDefault(log)
+
+	log.Info("starting db")
+	pool, err := db.NewPool(ctx, cfg.DB)
 	if err != nil {
 		return fmt.Errorf("db: %w", err)
 	}
-	defer pool.Close()
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("healthy"))
-	})
-
-	srv := &http.Server{
-		Addr:              cfg.ADDR,
-		Handler:           mux,
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       10 * time.Second,
-		WriteTimeout:      10 * time.Second,
-		IdleTimeout:       60 * time.Second,
-		MaxHeaderBytes:    1 << 20,
-	}
-
-	errCh := make(chan error, 1)
-	go func() {
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			errCh <- err
-		}
+	log.Info("db connected")
+	defer func() {
+		log.Info("closing db")
+		pool.Close()
+		log.Info("db closed")
 	}()
 
-	select {
-	case err := <-errCh:
-		return fmt.Errorf("server failed: %w", err)
-	case <-ctx.Done():
-		stop()
-		logger.Info("shutting down")
-	}
-
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		return fmt.Errorf("shutdown failed: %w", err)
-	}
-
-	logger.Info("server stopped")
-	return nil
+	return app.New(cfg, log, pool).Run(ctx)
 }

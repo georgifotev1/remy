@@ -3,23 +3,23 @@ package db
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/georgifotev1/remy/internal/platform/apperr"
+	"github.com/georgifotev1/remy/internal/platform/config"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func NewPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
-	cfg, err := pgxpool.ParseConfig(dsn)
+func NewPool(ctx context.Context, c config.DBConfig) (*pgxpool.Pool, error) {
+	cfg, err := pgxpool.ParseConfig(c.URL)
 	if err != nil {
 		return nil, err
 	}
-	cfg.MaxConns = 10
-	cfg.MinConns = 2
-	cfg.MaxConnLifetime = time.Hour
-	cfg.MaxConnIdleTime = 30 * time.Minute
+
+	cfg.MaxConns = c.MaxConns
+	cfg.MinConns = c.MinConns
+	cfg.MaxConnLifetime = c.MaxConnLifetime
 
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {

@@ -12,3 +12,6 @@ migrate-down:
 migrate-create:
 	@test -n "$(name)" || (echo "usage: make migrate-create name=<name>" && exit 1)
 	goose -dir $(MIGRATIONS_DIR) -s create $(name) sql
+
+dev:
+	go build -o bin ./cmd/api && ./bin

@@ -13,33 +13,24 @@ import (
 
 type Envelope map[string]any
 
-func Write(w http.ResponseWriter, status int, data any, headers http.Header) error {
-	js, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-	js = append(js, '\n')
-
-	for k, v := range headers {
-		w.Header()[k] = v
-	}
+func Write(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_, err = w.Write(js)
-	return err
+	json.NewEncoder(w).Encode(data)
 }
 
-func WriteError(w http.ResponseWriter, status int, msg string) error {
-	return Write(w, status, Envelope{"error": msg}, nil)
+func WriteError(w http.ResponseWriter, status int, msg string) {
+	Write(w, status, Envelope{"error": msg})
 }
 
-func Read(w http.ResponseWriter, r *http.Request, dst any) error {
+// Payload must be a non-nil pointer!!!
+func Read(w http.ResponseWriter, r *http.Request, payload any) error {
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB
 
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 
-	if err := dec.Decode(dst); err != nil {
+	if err := dec.Decode(payload); err != nil {
 		return badRequest(err)
 	}
 
@@ -76,7 +67,7 @@ func badRequest(err error) error {
 	case errors.As(err, &maxBytesErr):
 		msg = fmt.Sprintf("body must not be larger than %d bytes", maxBytesErr.Limit)
 	case errors.As(err, &invalidErr):
-		panic(err) // programmer error: dst must be a non-nil pointer
+		panic(err) // programmer error: payload must be a non-nil pointer
 	default:
 		return err
 	}
