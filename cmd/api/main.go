@@ -11,8 +11,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/georgifotev1/remy/internal/config"
-	"github.com/georgifotev1/remy/internal/db"
+	"github.com/georgifotev1/remy/internal/platform/config"
+	"github.com/georgifotev1/remy/internal/platform/db"
 )
 
 func main() {
