@@ -5,9 +5,11 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -60,11 +62,28 @@ func (m *SessionModel) Insert(ctx context.Context, s *Session) error {
 
 func (m *SessionModel) DeleteByToken(ctx context.Context, plaintext string) error {
 	const query = `
-		DELETE FROM sessions
-		WHERE token_hash = $1`
+			DELETE FROM sessions
+			WHERE token_hash = $1`
 
 	_, err := m.db.Exec(ctx, query, hashToken(plaintext))
 	return err
 }
 
-func (m *SessionModel) GetByToken(ctx, token string) {}
+func (m *SessionModel) GetByToken(ctx context.Context, token string) (*Session, error) {
+	const query = `
+			SELECT user_id
+			FROM sessions WHERE token_hash = $1
+			AND expires_at > now()`
+
+	hash := hashToken(token)
+	s := Session{Hash: hash}
+	err := m.db.QueryRow(ctx, query, hash).Scan(&s.UserID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrRecordNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &s, nil
+}

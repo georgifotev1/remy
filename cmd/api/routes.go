@@ -11,6 +11,8 @@ func (app *application) routes() http.Handler {
 	mux.HandleFunc("POST /api/v1/login", app.loginHandler)
 	mux.HandleFunc("POST /api/v1/logout", app.logoutHandler)
 
+	mux.Handle("GET /api/v1/me", app.requireAuth(http.HandlerFunc(app.meHandler)))
+
 	return chain(mux,
 		app.requestID,
 		app.logRequest,
@@ -21,5 +23,5 @@ func (app *application) routes() http.Handler {
 
 func (app *application) healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte("healthy"))
+	w.Write([]byte("healthy"))
 }

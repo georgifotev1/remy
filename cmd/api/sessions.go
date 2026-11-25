@@ -38,7 +38,9 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 	v := validator.New()
 
 	v.Check(validator.NotBlank(input.Email), "email", "must be provided")
-	v.Check(validator.NotBlank(input.Password), "password", "must be provided")
+	v.Check(validator.MaxChars(input.Email, 254), "email", "must not be more than 254 characters")
+	v.Check(validator.Matches(input.Email, validator.EmailRX), "email", "must be a valid email address")
+	v.Check(validator.MinChars(input.Password, 8), "password", "must be at least 8 characters")
 
 	if !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)

@@ -69,3 +69,28 @@ func (m *UserModel) GetByEmail(ctx context.Context, email string) (*User, error)
 	}
 	return &u, nil
 }
+
+// GetByID returns ErrRecordNotFound if no user has that id.
+func (m *UserModel) GetByID(ctx context.Context, id uuid.UUID) (*User, error) {
+	const query = `
+		SELECT id, name, email, password_hash, created_at, updated_at
+		FROM users
+		WHERE id = $1`
+
+	var u User
+	err := m.db.QueryRow(ctx, query, id).Scan(
+		&u.ID,
+		&u.Name,
+		&u.Email,
+		&u.PasswordHash,
+		&u.CreatedAt,
+		&u.UpdatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrRecordNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}

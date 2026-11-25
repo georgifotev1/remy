@@ -55,6 +55,10 @@ func (app *application) invalidCredentialsResponse(w http.ResponseWriter, r *htt
 	app.errorResponse(w, r, http.StatusUnauthorized, "invalid email or password")
 }
 
+func (app *application) authenticationRequiredResponse(w http.ResponseWriter, r *http.Request) {
+	app.errorResponse(w, r, http.StatusUnauthorized, "you must be authenticated to access this resource")
+}
+
 func (app *application) failedValidationResponse(w http.ResponseWriter, r *http.Request, errs map[string]string) {
 	if err := app.writeJSON(w, http.StatusUnprocessableEntity, envelope{"errors": errs}, nil); err != nil {
 		app.serverErrorResponse(w, r, err)

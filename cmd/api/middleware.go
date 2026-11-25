@@ -3,11 +3,14 @@ package main
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"net/http"
 	"runtime/debug"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/georgifotev1/remy/internal/data"
 )
 
 type middleware func(http.Handler) http.Handler
@@ -140,5 +143,28 @@ func (app *application) enableCORS(next http.Handler) http.Handler {
 			}
 		}
 		next.ServeHTTP(w, r)
+	})
+}
+
+func (app *application) requireAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie(sessionCookieName)
+		if err != nil {
+			app.authenticationRequiredResponse(w, r)
+			return
+		}
+
+		session, err := app.models.Sessions.GetByToken(r.Context(), cookie.Value)
+		if err != nil {
+			if errors.Is(err, data.ErrRecordNotFound) {
+				app.clearSessionCookie(w)
+				app.authenticationRequiredResponse(w, r)
+				return
+			}
+			app.serverErrorResponse(w, r, err)
+			return
+		}
+
+		next.ServeHTTP(w, contextSetUserID(r, session.UserID))
 	})
 }
